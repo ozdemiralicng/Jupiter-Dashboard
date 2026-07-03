@@ -1,0 +1,49 @@
+{
+  "name": "trading-copilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Trading Copilot decision support dashboard for mobile phone wholesale trading.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "dev:local": "npm run db:start && npm run dev",
+    "dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-dev.ps1",
+    "db:start": "powershell -ExecutionPolicy Bypass -File scripts/start-postgres.ps1",
+    "db:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-postgres.ps1",
+    "db:status": "powershell -ExecutionPolicy Bypass -File scripts/status-postgres.ps1",
+    "setup:local": "npm run db:start && npm run prisma:generate && npm run prisma:deploy && npm run seed",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css,json,md}\"",
+    "prisma:generate": "npm run prisma:generate -w apps/api",
+    "prisma:deploy": "npm run prisma:deploy -w apps/api",
+    "prisma:migrate": "npm run prisma:migrate -w apps/api",
+    "seed": "npm run seed -w apps/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  },
+  "overrides": {
+    "@nestjs/platform-express": {
+      "multer": "^2.2.0"
+    },
+    "exceljs": {
+      "uuid": "^11.1.1"
+    },
+    "multer": "^2.2.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "bcrypt@6.0.0": true,
+    "prisma@5.22.0": true,
+    "@scarf/scarf": false
+  }
+}

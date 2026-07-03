@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES
+}
+
+enum ImportStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         Role       @default(SALES)
+  isActive     Boolean    @default(true)
+  refreshHash  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  imports      Import[]
+  auditLogs    AuditLog[]
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  code           String          @unique
+  originalName   String
+  brand          String?
+  model          String?
+  capacity       String?
+  color          String?
+  region         String?
+  unit           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  items          InventoryItem[]
+  marketPrices   MarketPrice[]
+  supplierOffers SupplierOffer[]
+}
+
+model Warehouse {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  location  String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  items     InventoryItem[]
+}
+
+model InventorySnapshot {
+  id             String          @id @default(cuid())
+  importedAt     DateTime        @default(now())
+  sourceFileName String
+  totalRows      Int
+  totalValue     Decimal         @db.Decimal(18, 2)
+  importId       String          @unique
+  import         Import          @relation(fields: [importId], references: [id], onDelete: Cascade)
+  items          InventoryItem[]
+}
+
+model InventoryItem {
+  id          String            @id @default(cuid())
+  snapshotId  String
+  productId   String
+  warehouseId String
+  quantity    Decimal           @db.Decimal(18, 3)
+  unit        String?
+  price       Decimal           @db.Decimal(18, 2)
+  totalPrice  Decimal           @db.Decimal(18, 2)
+  snapshot    InventorySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  product     Product           @relation(fields: [productId], references: [id])
+  warehouse   Warehouse         @relation(fields: [warehouseId], references: [id])
+
+  @@index([snapshotId, warehouseId])
+  @@index([productId])
+}
+
+model Supplier {
+  id        String          @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  whatsapp  String?
+  country   String?
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  offers    SupplierOffer[]
+}
+
+model SupplierOffer {
+  id          String   @id @default(cuid())
+  supplierId  String
+  productId   String
+  price       Decimal  @db.Decimal(18, 2)
+  quantity    Decimal? @db.Decimal(18, 3)
+  currency    String   @default("AED")
+  availableAt DateTime @default(now())
+  notes       String?
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  name       String
+  email      String?
+  phone      String?
+  whatsapp   String?
+  country    String?
+  orderNotes String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model MarketPrice {
+  id        String   @id @default(cuid())
+  productId String
+  price     Decimal  @db.Decimal(18, 2)
+  currency  String   @default("AED")
+  source    String?
+  observedAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Import {
+  id              String             @id @default(cuid())
+  fileName        String
+  status          ImportStatus       @default(PENDING)
+  rowCount        Int                @default(0)
+  validRows       Int                @default(0)
+  invalidRows     Int                @default(0)
+  errors          Json?
+  importedById    String?
+  createdAt       DateTime           @default(now())
+  completedAt     DateTime?
+  importedBy      User?              @relation(fields: [importedById], references: [id])
+  snapshot        InventorySnapshot?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  actor     User?    @relation(fields: [actorId], references: [id])
+}
