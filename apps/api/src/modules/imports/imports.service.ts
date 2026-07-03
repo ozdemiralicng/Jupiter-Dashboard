@@ -16,20 +16,20 @@ export class ImportsService {
 
   async preview(file?: Express.Multer.File) {
     this.assertExcel(file);
-    const parsed = await this.parser.parse(file.buffer);
+    const parsed = await this.parser.parse(file.buffer, file.originalname);
     return { fileName: file.originalname, ...parsed, summary: this.summary(parsed.rows) };
   }
 
   async import(file: Express.Multer.File | undefined, userId?: string) {
     this.assertExcel(file);
-    const parsed = await this.parser.parse(file.buffer);
+    const parsed = await this.parser.parse(file.buffer, file.originalname);
     const importLog = await this.prisma.import.create({
       data: { fileName: file.originalname, rowCount: parsed.rows.length + parsed.errors.length, validRows: parsed.rows.length, invalidRows: parsed.errors.length, errors: parsed.errors },
     });
 
-    if (parsed.errors.length) {
+    if (!parsed.rows.length) {
       await this.prisma.import.update({ where: { id: importLog.id }, data: { status: 'FAILED' } });
-      throw new BadRequestException({ message: 'Import contains validation errors', importId: importLog.id, errors: parsed.errors });
+      throw new BadRequestException({ message: 'Import does not contain valid inventory rows', importId: importLog.id, errors: parsed.errors });
     }
 
     const totalValue = parsed.rows.reduce((sum, row) => sum + row.totalPrice, 0);
@@ -55,11 +55,11 @@ export class ImportsService {
       }
 
       await tx.import.update({ where: { id: importLog.id }, data: { status: 'COMPLETED', completedAt: new Date(), importedById: userId } });
-      await tx.auditLog.create({ data: { actorId: userId, action: 'IMPORT_INVENTORY', entity: 'Import', entityId: importLog.id, metadata: { rows: parsed.rows.length, fileName: file.originalname } } });
+      await tx.auditLog.create({ data: { actorId: userId, action: 'IMPORT_INVENTORY', entity: 'Import', entityId: importLog.id, metadata: { rows: parsed.rows.length, invalidRows: parsed.errors.length, fileName: file.originalname } } });
       return snap;
     });
 
-    return { importId: importLog.id, snapshotId: snapshot.id, ...this.summary(parsed.rows) };
+    return { importId: importLog.id, snapshotId: snapshot.id, invalidRows: parsed.errors.length, errors: parsed.errors, ...this.summary(parsed.rows) };
   }
 
   list() {

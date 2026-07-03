@@ -8,6 +8,7 @@ import { Table } from './inventory';
 
 type ImportLog = { id: string; fileName: string; status: string; rowCount: number; validRows: number; invalidRows: number; createdAt: string };
 type Preview = { fileName: string; rows: Array<{ productCode: string; latinName: string; quantity: number; price: number; totalPrice: number; store: string }>; errors: Array<{ row: number; message: string }>; summary: { validRows: number; totalValue: number } };
+type ImportResult = { validRows: number; invalidRows: number; totalValue: number };
 
 export function ImportsPage() {
   const { locale, t } = useI18n();
@@ -22,13 +23,14 @@ export function ImportsPage() {
     onSuccess: setPreview,
   });
   const importMutation = useMutation({
-    mutationFn: (selected: File) => upload<{ validRows: number; totalValue: number }>('/imports', selected),
+    mutationFn: (selected: File) => upload<ImportResult>('/imports', selected),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['imports'] });
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       void queryClient.invalidateQueries({ queryKey: ['inventory'] });
       void queryClient.invalidateQueries({ queryKey: ['products'] });
-      setSuccessMessage(`${result.validRows} ${t('imports.validRows')} - ${formatMoney(result.totalValue, locale)}`);
+      const invalidText = result.invalidRows ? ` - ${result.invalidRows} ${t('imports.validationErrors')}` : '';
+      setSuccessMessage(`${result.validRows} ${t('imports.validRows')} - ${formatMoney(result.totalValue, locale)}${invalidText}`);
       setPreview(null);
       setFile(null);
     },
@@ -50,6 +52,15 @@ export function ImportsPage() {
         {importMutation.error && <Alert tone="error" text={importMutation.error.message} />}
         {successMessage && <Alert tone="success" text={successMessage} />}
         {preview && <div className="rounded-md bg-muted p-3 text-sm">{preview.summary.validRows} {t('imports.validRows')} - {formatMoney(preview.summary.totalValue, locale)} - {preview.errors.length} {t('imports.validationErrors')}</div>}
+        {!!preview?.errors.length && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+            <div className="font-medium">{preview.errors.length} {t('imports.validationErrors')}</div>
+            <ul className="mt-2 space-y-1">
+              {preview.errors.slice(0, 10).map((error) => <li key={`${error.row}-${error.message}`}>{t('table.rows')} {error.row}: {error.message}</li>)}
+            </ul>
+            {preview.errors.length > 10 && <div className="mt-2">+{preview.errors.length - 10}</div>}
+          </div>
+        )}
       </Card>
       {preview && (
         <Card>

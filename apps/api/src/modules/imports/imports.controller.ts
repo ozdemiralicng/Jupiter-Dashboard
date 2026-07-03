@@ -14,14 +14,14 @@ export class ImportsController {
 
   @Post('preview')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 20 * 1024 * 1024 } }))
   preview(@UploadedFile() file?: Express.Multer.File) {
     return this.imports.preview(file);
   }
 
   @Post()
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 20 * 1024 * 1024 } }))
   import(@UploadedFile() file: Express.Multer.File | undefined, @CurrentUser() user: AuthUser) {
     return this.imports.import(file, user.sub);
   }
