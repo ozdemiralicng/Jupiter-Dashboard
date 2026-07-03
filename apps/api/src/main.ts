@@ -22,8 +22,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle('Trading Copilot API')
-      .setDescription('Decision support API for Al Ameen inventory exports and trading workflows.')
+      .setTitle('Jupiter GSM Dashboard API')
+      .setDescription('Decision support API for Al Ameen inventory exports and Jupiter GSM trading workflows.')
       .setVersion('0.1.0')
       .addBearerAuth()
       .build(),

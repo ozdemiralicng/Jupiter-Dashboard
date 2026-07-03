@@ -1,6 +1,6 @@
-# Trading Copilot
+# Jupiter GSM Dashboard
 
-Trading Copilot is a decision-support dashboard for a Dubai mobile phone wholesale trading team. It sits on top of Al Ameen ERP exports and centralizes inventory snapshots, product normalization, supplier/customer context, import history, and analytics. It does not replace ERP operations.
+Jupiter GSM Dashboard is a decision-support dashboard for a Dubai mobile phone wholesale trading team. It sits on top of Al Ameen ERP exports and centralizes inventory snapshots, product normalization, supplier/customer context, import history, and analytics. It does not replace ERP operations.
 
 ## Stack
 
@@ -14,10 +14,7 @@ Trading Copilot is a decision-support dashboard for a Dubai mobile phone wholesa
 npm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
-docker compose up -d postgres pgadmin
-npm run prisma:generate
-npm run prisma:migrate
-npm run seed
+npm run setup:local
 npm run dev
 ```
 
@@ -41,7 +38,7 @@ The API container runs Prisma migrations before starting. PostgreSQL data is per
 
 ## Al Ameen Inventory Imports
 
-Each uploaded Excel file creates a new immutable `InventorySnapshot`. Existing inventory rows are never overwritten. The import pipeline validates required columns, previews parsed rows, stores import metadata, inserts inventory items, records import status, and writes audit logs.
+Each uploaded Excel file creates a new immutable `InventorySnapshot`. Existing inventory rows are never overwritten. The import pipeline supports `.xlsx` and legacy `.xls`, previews parsed rows, stores import metadata, inserts valid inventory items, records invalid rows, and writes audit logs.
 
 Expected workbook columns:
 
@@ -52,6 +49,8 @@ Expected workbook columns:
 - `Price`
 - `Total Price`
 - `Store`
+
+If an import contains both valid and invalid rows, valid rows are imported and invalid rows are recorded in the import history. If no valid inventory rows are found, the import is rejected.
 
 ## Production Notes
 

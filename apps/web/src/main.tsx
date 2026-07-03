@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRoute, createRootRoute, createRouter, Link, Outlet, RouterProvider } from '@tanstack/react-router';
-import { Moon, Package, Upload, Users, Warehouse, Settings, BarChart3, Home, Sun, LogOut } from 'lucide-react';
+import { Moon, Package, Upload, Users, Warehouse, Settings, BarChart3, Home, Sun, LogOut, Boxes } from 'lucide-react';
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from './components/error-boundary';
-import { Button } from './components/ui';
+import { Button, Card, PageHeader } from './components/ui';
 import { getSession, setSession } from './lib/api';
 import { LanguageProvider, useI18n } from './lib/i18n';
 import { AnalyticsPage } from './pages/analytics';
@@ -36,42 +36,56 @@ function AppLayout() {
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
-  if (!session && location.pathname !== '/login') return <LoginPage />;
+  if (!session) return <LoginPage />;
+
+  const navLinkClass = 'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-foreground/75 transition hover:bg-muted hover:text-foreground [&.active]:bg-primary/10 [&.active]:font-semibold [&.active]:text-primary';
 
   return (
-    <div className="min-h-screen bg-muted/40">
+    <div className="min-h-screen bg-muted/35">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-border bg-background p-4 md:block">
-        <div className="mb-6">
-          <div className="text-lg font-semibold">{t('app.name')}</div>
-          <div className="text-xs text-foreground/60">{t('app.tagline')}</div>
+        <div className="mb-6 flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+            <Boxes size={20} />
+          </div>
+          <div>
+            <div className="text-lg font-semibold leading-tight">{t('app.name')}</div>
+            <div className="text-xs text-foreground/60">{t('app.tagline')}</div>
+          </div>
         </div>
         <nav className="space-y-1">
           {nav.map((item) => (
-            <Link key={item.to} to={item.to} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted [&.active]:bg-muted [&.active]:font-semibold">
+            <Link key={item.to} to={item.to} className={navLinkClass}>
               <item.icon size={16} /> {item.label}
             </Link>
           ))}
         </nav>
       </aside>
       <main className="md:pl-64">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur">
+        <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
           <div>
             <div className="text-sm font-medium">{t('app.workspace')}</div>
             <div className="text-xs text-foreground/60">{session?.user.email}</div>
           </div>
           <div className="flex gap-2">
-            <Button className="h-9 bg-muted text-foreground" onClick={toggleLanguage}>
+            <Button variant="secondary" size="sm" onClick={toggleLanguage} aria-label="Toggle language">
               {language === 'tr' ? 'EN' : 'TR'}
             </Button>
-            <Button className="h-9 bg-muted text-foreground" onClick={() => { document.documentElement.classList.toggle('dark'); setDark(!dark); }}>
+            <Button variant="secondary" size="sm" onClick={() => { document.documentElement.classList.toggle('dark'); setDark(!dark); }} aria-label="Toggle theme">
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </Button>
-            <Button className="h-9 bg-muted text-foreground" onClick={() => { setSession(null); window.location.href = '/login'; }}>
+            <Button variant="secondary" size="sm" onClick={() => { setSession(null); window.location.href = '/login'; }} aria-label="Sign out">
               <LogOut size={16} />
             </Button>
           </div>
         </header>
-        <div className="p-4 md:p-6">
+        <nav className="no-scrollbar flex gap-2 overflow-x-auto border-b border-border bg-background px-4 py-2 md:hidden">
+          {nav.map((item) => (
+            <Link key={item.to} to={item.to} className="inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground/75 hover:bg-muted [&.active]:bg-primary/10 [&.active]:font-semibold [&.active]:text-primary">
+              <item.icon size={15} /> {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="mx-auto max-w-[1600px] p-4 md:p-6">
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>
@@ -101,7 +115,14 @@ const router = createRouter({
 
 function SettingsPage() {
   const { t } = useI18n();
-  return <div className="rounded-lg border border-border bg-background p-6"><h1 className="text-xl font-semibold">{t('settings.title')}</h1><p className="mt-2 text-sm text-foreground/70">{t('settings.subtitle')}</p></div>;
+  return (
+    <div className="space-y-4">
+      <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
+      <Card>
+        <div className="text-sm text-foreground/60">{t('settings.subtitle')}</div>
+      </Card>
+    </div>
+  );
 }
 
 declare module '@tanstack/react-router' {

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -9,7 +10,8 @@ export class WarehousesService {
     return this.prisma.warehouse.findMany({ orderBy: { name: 'asc' } });
   }
 
-  upsertByName(name: string) {
-    return this.prisma.warehouse.upsert({ where: { name }, update: {}, create: { name } });
+  upsertByName(name: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.warehouse.upsert({ where: { name }, update: {}, create: { name } });
   }
 }

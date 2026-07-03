@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Card, Input, Skeleton } from '../components/ui';
+import { Badge, Card, Input, PageHeader, Skeleton } from '../components/ui';
 import { api } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { Table } from './inventory';
@@ -14,10 +14,7 @@ export function ProductsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">{t('products.title')}</h1>
-        <p className="text-sm text-foreground/60">{t('products.subtitle')}</p>
-      </div>
+      <PageHeader title={t('products.title')} subtitle={t('products.subtitle')} actions={<Badge>{data?.items.length ?? 0}</Badge>} />
       <Card><Input placeholder={t('products.search')} value={search} onChange={(event) => setSearch(event.target.value)} /></Card>
       {isLoading ? (
         <Skeleton className="h-80" />

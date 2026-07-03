@@ -36,7 +36,7 @@ services:
       - apps/api/.env.example
     environment:
       DATABASE_URL: postgresql://trading:trading_password@postgres:5432/trading_copilot?schema=public
-      CORS_ORIGIN: http://localhost:5173
+      CORS_ORIGIN: http://localhost:5173,http://127.0.0.1:5173
     ports:
       - "3000:3000"
     depends_on:

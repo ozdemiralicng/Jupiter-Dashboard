@@ -39,8 +39,8 @@ export class ImportsService {
       });
 
       for (const row of parsed.rows) {
-        const product = await this.products.upsertFromImport(row.productCode, row.latinName, row.unit);
-        const warehouse = await this.warehouses.upsertByName(row.store);
+        const product = await this.products.upsertFromImport(row.productCode, row.latinName, row.unit, tx);
+        const warehouse = await this.warehouses.upsertByName(row.store, tx);
         await tx.inventoryItem.create({
           data: {
             snapshotId: snap.id,

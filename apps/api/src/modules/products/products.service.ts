@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto, toPagination } from '../../shared/pagination.dto';
 import { ProductNormalizerService } from './product-normalizer.service';
 
+const PRODUCT_SORT_FIELDS = ['code', 'originalName', 'brand', 'model', 'capacity', 'color', 'region', 'createdAt', 'updatedAt'] as const;
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -15,8 +17,11 @@ export class ProductsService {
     const where: Prisma.ProductWhereInput = query.search
       ? { OR: [{ code: { contains: query.search, mode: 'insensitive' } }, { originalName: { contains: query.search, mode: 'insensitive' } }] }
       : {};
+    const sortBy: (typeof PRODUCT_SORT_FIELDS)[number] = PRODUCT_SORT_FIELDS.includes(query.sortBy as (typeof PRODUCT_SORT_FIELDS)[number])
+      ? (query.sortBy as (typeof PRODUCT_SORT_FIELDS)[number])
+      : 'updatedAt';
     const [items, total] = await this.prisma.$transaction([
-      this.prisma.product.findMany({ where, ...toPagination(query), orderBy: { [query.sortBy ?? 'updatedAt']: query.sortDir ?? 'desc' } }),
+      this.prisma.product.findMany({ where, ...toPagination(query), orderBy: { [sortBy]: query.sortDir ?? 'desc' } }),
       this.prisma.product.count({ where }),
     ]);
     return { items, total, page: query.page, pageSize: query.pageSize };
@@ -34,9 +39,10 @@ export class ProductsService {
     return product;
   }
 
-  async upsertFromImport(code: string, originalName: string, unit?: string) {
+  async upsertFromImport(code: string, originalName: string, unit?: string, tx?: Prisma.TransactionClient) {
     const normalized = this.normalizer.normalize(originalName);
-    return this.prisma.product.upsert({
+    const client = tx ?? this.prisma;
+    return client.product.upsert({
       where: { code },
       update: { originalName, unit, ...normalized },
       create: { code, originalName, unit, ...normalized },
