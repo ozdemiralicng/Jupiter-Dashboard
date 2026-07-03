@@ -8,7 +8,13 @@ export type AuthSession = {
 
 export function getSession(): AuthSession | null {
   const raw = localStorage.getItem('trading-copilot-session');
-  return raw ? (JSON.parse(raw) as AuthSession) : null;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthSession;
+  } catch {
+    setSession(null);
+    return null;
+  }
 }
 
 export function setSession(session: AuthSession | null) {
@@ -22,7 +28,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (session) headers.set('Authorization', `Bearer ${session.accessToken}`);
   if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   const response = await fetch(`${API_URL}${path}`, { ...init, headers });
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) {
+    const message = await getErrorMessage(response);
+    if (response.status === 401) {
+      setSession(null);
+      if (window.location.pathname !== '/login') window.location.href = '/login';
+    }
+    throw new Error(message);
+  }
   return response.json() as Promise<T>;
 }
 
@@ -30,4 +43,19 @@ export async function upload<T>(path: string, file: File): Promise<T> {
   const form = new FormData();
   form.append('file', file);
   return api<T>(path, { method: 'POST', body: form });
+}
+
+async function getErrorMessage(response: Response) {
+  const text = await response.text();
+  if (!text) return response.statusText;
+  try {
+    const payload = JSON.parse(text);
+    const error = payload.error ?? payload.message ?? payload;
+    if (typeof error === 'string') return error;
+    if (typeof error?.message === 'string') return error.message;
+    if (Array.isArray(error?.message)) return error.message.join(', ');
+    return JSON.stringify(error);
+  } catch {
+    return text;
+  }
 }

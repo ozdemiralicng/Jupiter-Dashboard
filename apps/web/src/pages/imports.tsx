@@ -14,9 +14,25 @@ export function ImportsPage() {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const imports = useQuery({ queryKey: ['imports'], queryFn: () => api<ImportLog[]>('/imports') });
-  const previewMutation = useMutation({ mutationFn: (selected: File) => upload<Preview>('/imports/preview', selected), onSuccess: setPreview });
-  const importMutation = useMutation({ mutationFn: (selected: File) => upload('/imports', selected), onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['imports'] }); setPreview(null); setFile(null); } });
+  const previewMutation = useMutation({
+    mutationFn: (selected: File) => upload<Preview>('/imports/preview', selected),
+    onMutate: () => { setSuccessMessage(null); setPreview(null); },
+    onSuccess: setPreview,
+  });
+  const importMutation = useMutation({
+    mutationFn: (selected: File) => upload<{ validRows: number; totalValue: number }>('/imports', selected),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ['imports'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      void queryClient.invalidateQueries({ queryKey: ['products'] });
+      setSuccessMessage(`${result.validRows} ${t('imports.validRows')} - ${formatMoney(result.totalValue, locale)}`);
+      setPreview(null);
+      setFile(null);
+    },
+  });
 
   return (
     <div className="space-y-4">
@@ -30,6 +46,9 @@ export function ImportsPage() {
           <Button disabled={!file || previewMutation.isPending} onClick={() => file && previewMutation.mutate(file)}>{t('actions.preview')}</Button>
           <Button disabled={!file || !preview || importMutation.isPending} onClick={() => file && importMutation.mutate(file)}>{t('actions.importSnapshot')}</Button>
         </div>
+        {previewMutation.error && <Alert tone="error" text={previewMutation.error.message} />}
+        {importMutation.error && <Alert tone="error" text={importMutation.error.message} />}
+        {successMessage && <Alert tone="success" text={successMessage} />}
         {preview && <div className="rounded-md bg-muted p-3 text-sm">{preview.summary.validRows} {t('imports.validRows')} - {formatMoney(preview.summary.totalValue, locale)} - {preview.errors.length} {t('imports.validationErrors')}</div>}
       </Card>
       {preview && (
@@ -50,4 +69,9 @@ export function ImportsPage() {
       </Card>
     </div>
   );
+}
+
+function Alert({ tone, text }: { tone: 'error' | 'success'; text: string }) {
+  const classes = tone === 'error' ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-100' : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100';
+  return <div className={`rounded-md border px-3 py-2 text-sm ${classes}`}>{text}</div>;
 }
